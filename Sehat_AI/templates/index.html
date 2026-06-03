@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ur-PK">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Sehat AI — پاکستان ہیلتھ اسسٹنٹ</title>
+
+  <!-- Google Fonts: Cormorant Garamond (display) + Outfit (UI) + Noto Nastaliq Urdu -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+<!-- ░░ Background mesh ░░ -->
+<div class="bg-mesh" aria-hidden="true">
+  <div class="mesh-blob mesh-blob--1"></div>
+  <div class="mesh-blob mesh-blob--2"></div>
+  <div class="mesh-blob mesh-blob--3"></div>
+</div>
+
+<!-- ═══════════════════════════════════
+     HEADER
+═══════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-inner">
+
+    <a href="/" class="logo" aria-label="Sehat AI Home">
+      <span class="logo-mark">⚕</span>
+      <span class="logo-text">Sehat <em>AI</em></span>
+    </a>
+
+    <div class="header-badges">
+      <span class="badge badge--live">
+        <span class="badge-dot"></span>
+        {{ total_diseases }} Diseases
+      </span>
+      {% if gemini_active %}
+      <span class="badge badge--ai">🤖 Gemini</span>
+      {% else %}
+      <span class="badge badge--csv">📋 CSV Engine</span>
+      {% endif %}
+    </div>
+
+    <button class="btn-emergency-sm" onclick="callEmergency()" aria-label="Emergency 1122">
+      🚨 1122
+    </button>
+  </div>
+</header>
+
+
+<!-- ═══════════════════════════════════
+     MAIN
+═══════════════════════════════════ -->
+<main class="main">
+
+  <!-- ── Hero ── -->
+  <section class="hero" aria-label="Hero">
+    <p class="hero-tagline">پاکستان ہیلتھ اسسٹنٹ</p>
+    <h1 class="hero-title">
+      اپنی تکلیف بتائیں،<br>
+      <em>Sehat AI</em> مدد کرے گا
+    </h1>
+    <p class="hero-sub">
+      Type symptoms in <strong>Urdu</strong> or <strong>English</strong> —
+      our AI analyses and advises instantly.
+    </p>
+  </section>
+
+
+  <!-- ── Input Panel ── -->
+  <section class="panel panel--input" aria-label="Symptom Input">
+
+    <div class="panel-label">
+      <span class="panel-label-icon">✍️</span>
+      <span>علامات لکھیں &nbsp;/&nbsp; Write Your Symptoms</span>
+    </div>
+
+    <div class="textarea-shell">
+      <textarea
+        id="symptoms"
+        placeholder="مثال: تین دن سے بخار ہے، جسم درد کر رہا ہے، کمزوری ہے…&#10;Example: fever for 3 days, body ache, weakness, headache…"
+        rows="4"
+        aria-label="Describe your symptoms"
+      ></textarea>
+      <button class="mic-btn" id="micBtn" onclick="toggleVoice()" aria-label="Voice input" title="Speak symptoms">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Quick-add chips -->
+    <div class="chips-row" aria-label="Quick symptom chips">
+      <span class="chips-label">Quick add:</span>
+      <button class="chip" onclick="addSymptom('fever')">🌡 Fever / بخار</button>
+      <button class="chip" onclick="addSymptom('headache')">🤕 Headache</button>
+      <button class="chip" onclick="addSymptom('cough')">😮‍💨 Cough / کھانسی</button>
+      <button class="chip" onclick="addSymptom('body ache')">💪 Body Ache</button>
+      <button class="chip" onclick="addSymptom('nausea vomiting')">🤢 Nausea</button>
+      <button class="chip" onclick="addSymptom('chest pain')">❤️ Chest Pain</button>
+      <button class="chip" onclick="addSymptom('diarrhea')">🚽 Diarrhea</button>
+      <button class="chip" onclick="addSymptom('dizziness')">💫 Dizziness</button>
+    </div>
+
+    <!-- Buttons -->
+    <div class="action-row">
+      <button class="btn-analyse" id="analyseBtn" onclick="analyseSymptoms()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Analyse Symptoms
+      </button>
+      <button class="btn-ghost" onclick="clearAll()">Clear</button>
+    </div>
+
+    <!-- Voice status indicator -->
+    <div id="voiceStatus" class="voice-bar hidden" role="status" aria-live="polite">
+      <span class="voice-ring"></span>
+      <span id="voiceStatusText">Listening… بولیں</span>
+    </div>
+
+  </section>
+
+
+  <!-- ── Loader ── -->
+  <div id="loader" class="loader hidden" role="status" aria-live="polite">
+    <div class="loader-track">
+      <div class="loader-bar"></div>
+    </div>
+    <p class="loader-text">AI analyzing your symptoms…</p>
+  </div>
+
+
+  <!-- ── Results Panel ── -->
+  <section id="resultPanel" class="panel panel--results hidden" aria-label="Analysis Results" aria-live="polite">
+
+    <!-- Source + timestamp -->
+    <div class="result-meta-row">
+      <span id="sourceTag" class="source-tag"></span>
+      <span id="resultTime" class="result-ts"></span>
+    </div>
+
+    <!-- Top grid -->
+    <div class="result-grid">
+
+      <!-- Disease card -->
+      <div class="rcard rcard--disease">
+        <p class="rcard-label">Possible Condition</p>
+        <h2 id="diseaseName" class="disease-title"></h2>
+        <p id="diseaseUrdu" class="disease-urdu"></p>
+        <div class="rcard-tags" id="diseaseTagsRow"></div>
+      </div>
+
+      <!-- Confidence ring -->
+      <div class="rcard rcard--confidence">
+        <p class="rcard-label">Confidence</p>
+        <div class="ring-wrap" aria-label="Confidence score">
+          <svg class="ring-svg" viewBox="0 0 80 80" aria-hidden="true">
+            <circle class="ring-track" cx="40" cy="40" r="30"/>
+            <circle class="ring-progress" id="ringProgress" cx="40" cy="40" r="30"
+              stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+          </svg>
+          <span id="confidenceNum" class="ring-num">–</span>
+        </div>
+      </div>
+
+      <!-- Emergency status -->
+      <div class="rcard rcard--emergency" id="emergencyCard">
+        <p class="rcard-label">Emergency</p>
+        <div id="emergencyIcon" class="emrg-icon"></div>
+        <p id="emergencyText" class="emrg-text"></p>
+      </div>
+
+    </div><!-- /result-grid -->
+
+    <!-- Bilingual advice -->
+    <div class="advice-panel">
+      <div class="advice-col">
+        <p class="advice-lang">🇵🇰 اردو مشورہ</p>
+        <p id="adviceUrdu" class="advice-body advice-urdu"></p>
+      </div>
+      <div class="advice-divider" aria-hidden="true"></div>
+      <div class="advice-col">
+        <p class="advice-lang">🇬🇧 English Advice</p>
+        <p id="adviceEnglish" class="advice-body"></p>
+      </div>
+    </div>
+
+    <!-- Emergency CTA -->
+    <button id="emergencyCallBtn" class="btn-emergency-full hidden" onclick="callEmergency()">
+      🚨 &nbsp; EMERGENCY — CALL 1122 NOW &nbsp; 🚨
+    </button>
+
+    <!-- Disclaimer -->
+    <p class="disclaimer">
+      ⚠️ یہ ڈاکٹر کا مشورہ نہیں — صرف ابتدائی رہنمائی کے لیے ہے۔
+      Always consult a qualified doctor for diagnosis and treatment.
+    </p>
+
+  </section><!-- /resultPanel -->
+
+
+
+  <!-- ═══════════════════════════════════
+       MEDICINE LOOKUP SECTION
+  ═══════════════════════════════════ -->
+  <section class="med-section" aria-label="Medicine Lookup">
+
+    <div class="med-section-head">
+      <div class="med-title-row">
+        <span class="med-icon">💊</span>
+        <div>
+          <h2 class="med-title">Medicine Information</h2>
+          <p class="med-subtitle">دوائی کی معلومات — Urdu &amp; English</p>
+        </div>
+        {% if gemini_active %}
+        <span class="badge badge--ai med-ai-badge">🌐 Web-Verified AI</span>
+        {% else %}
+        <span class="badge badge--csv med-ai-badge">📋 Local DB</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel panel--med-input">
+      <div class="panel-label">
+        <span class="panel-label-icon">🔍</span>
+        <span>دوائی کا نام لکھیں &nbsp;/&nbsp; Enter Medicine Name</span>
+      </div>
+      <div class="med-input-row">
+        <input
+          type="text"
+          id="medicineInput"
+          class="med-input"
+          placeholder="e.g. Paracetamol, Ibuprofen, Amoxicillin, پیناڈول…"
+          aria-label="Medicine name"
+          onkeydown="if(event.key==='Enter') lookupMedicine()"
+        />
+        <button class="btn-analyse med-btn" id="medBtn" onclick="lookupMedicine()">
+          <span class="btn-icon">🔍</span>
+          تلاش کریں / Search
+        </button>
+      </div>
+
+      <!-- Quick medicine chips -->
+      <div class="chips-row" aria-label="Common medicines">
+        <span class="chips-label">Common:</span>
+        <button class="chip" onclick="quickMed('Paracetamol')">Paracetamol</button>
+        <button class="chip" onclick="quickMed('Ibuprofen')">Ibuprofen</button>
+        <button class="chip" onclick="quickMed('Amoxicillin')">Amoxicillin</button>
+        <button class="chip" onclick="quickMed('Omeprazole')">Omeprazole</button>
+        <button class="chip" onclick="quickMed('Cetirizine')">Cetirizine</button>
+        <button class="chip" onclick="quickMed('Metformin')">Metformin</button>
+      </div>
+    </div>
+
+    <!-- Medicine Loader -->
+    <div id="medLoader" class="loader hidden" aria-live="polite">
+      <div class="loader-ring"></div>
+      <span class="loader-text">Searching medicine database…</span>
+    </div>
+
+    <!-- Medicine Result Panel -->
+    <div id="medResultPanel" class="panel panel--med-result hidden" aria-live="polite">
+
+      <div class="med-result-header">
+        <div class="med-result-name-block">
+          <h3 id="medGenericName" class="med-generic-name">—</h3>
+          <p id="medUrduName" class="med-urdu-name urdu">—</p>
+          <div class="med-tags-row" id="medTagsRow"></div>
+        </div>
+        <div class="med-result-meta">
+          <span id="medSourceTag" class="source-tag">—</span>
+          <span id="medTime" class="result-time">—</span>
+        </div>
+      </div>
+
+      <div class="med-grid">
+
+        <!-- Uses -->
+        <div class="med-card med-card--uses">
+          <div class="med-card-icon">🎯</div>
+          <div class="med-card-body">
+            <h4 class="med-card-title">Uses / استعمال</h4>
+            <p id="medUses" class="med-card-text">—</p>
+            <p id="medUsesUrdu" class="med-card-text urdu">—</p>
+          </div>
+        </div>
+
+        <!-- Dosage -->
+        <div class="med-card med-card--dose">
+          <div class="med-card-icon">⚖️</div>
+          <div class="med-card-body">
+            <h4 class="med-card-title">Dosage / خوراک</h4>
+            <p id="medDosage" class="med-card-text">—</p>
+            <p id="medDosageUrdu" class="med-card-text urdu">—</p>
+          </div>
+        </div>
+
+        <!-- Side Effects -->
+        <div class="med-card med-card--side">
+          <div class="med-card-icon">⚠️</div>
+          <div class="med-card-body">
+            <h4 class="med-card-title">Side Effects / ضمنی اثرات</h4>
+            <p id="medSideEffects" class="med-card-text">—</p>
+            <p id="medSideEffectsUrdu" class="med-card-text urdu">—</p>
+          </div>
+        </div>
+
+        <!-- Warnings -->
+        <div class="med-card med-card--warn">
+          <div class="med-card-icon">🚫</div>
+          <div class="med-card-body">
+            <h4 class="med-card-title">Warnings / احتیاطیں</h4>
+            <p id="medWarnings" class="med-card-text">—</p>
+            <p id="medWarningsUrdu" class="med-card-text urdu">—</p>
+          </div>
+        </div>
+
+        <!-- Drug Interactions -->
+        <div class="med-card med-card--interact" id="medInteractCard" style="display:none">
+          <div class="med-card-icon">🔗</div>
+          <div class="med-card-body">
+            <h4 class="med-card-title">Drug Interactions / دوائی کے تعاملات</h4>
+            <p id="medInteract" class="med-card-text">—</p>
+            <p id="medInteractUrdu" class="med-card-text urdu">—</p>
+          </div>
+        </div>
+
+      </div><!-- /med-grid -->
+
+      <!-- OTC / Prescription notice -->
+      <div id="medRxNotice" class="med-rx-notice"></div>
+
+      <p class="med-disclaimer">
+        ⚕️ <strong>Disclaimer:</strong> This information is for educational purposes only.
+        Always consult a qualified doctor or pharmacist before taking any medication.
+        <span class="urdu" style="display:block;margin-top:4px">یہ معلومات صرف تعلیمی مقاصد کے لیے ہیں۔ کوئی بھی دوائی لینے سے پہلے ڈاکٹر سے مشورہ کریں۔</span>
+      </p>
+
+    </div><!-- /medResultPanel -->
+
+  </section>
+
+  <!-- ── Disease Directory ── -->
+  <section class="directory" aria-label="Disease Directory">
+    <div class="directory-head">
+      <h2 class="directory-title">Disease Directory</h2>
+      <span class="dir-badge">{{ total_diseases }} conditions</span>
+    </div>
+    <input
+      class="dir-filter"
+      id="dirFilter"
+      type="search"
+      placeholder="Search diseases or categories…"
+      oninput="filterDirectory()"
+      aria-label="Filter diseases"
+    />
+    <div id="dirGrid" class="dir-grid" aria-live="polite"></div>
+  </section>
+
+</main>
+
+
+<!-- ═══════════════════════════════════
+     FOOTER
+═══════════════════════════════════ -->
+<footer class="site-footer">
+  <p class="footer-brand">Sehat AI &nbsp;·&nbsp; FYP Project &nbsp;·&nbsp; GCUF {{ year }}</p>
+  <p class="footer-emergency">
+    Emergency Pakistan:&nbsp; <strong>1122</strong> &nbsp;|&nbsp;
+    Ambulance:&nbsp; <strong>115</strong> &nbsp;|&nbsp;
+    Edhi Foundation:&nbsp; <strong>021-111-11-3434</strong>
+  </p>
+  <p class="footer-note">Main Language: Python (Flask) &nbsp;·&nbsp; Powered by pandas + Gemini AI</p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
